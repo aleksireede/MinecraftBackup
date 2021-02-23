@@ -3,7 +3,6 @@ import os
 import shutil
 import sys
 import traceback
-from sys import platform
 
 f1 = ''
 username = ''
@@ -16,7 +15,7 @@ drive_list = ['A:', 'B:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 
 
 
 def os_check():  # check for the operating system used
-    if platform == "linux" or platform == "linux2":
+    if sys.platform == "linux" or sys.platform == "linux2":
         print('')
         print('--------------------------------------------------------------------------------')
         print(OS_String, 'Linux')
@@ -26,7 +25,7 @@ def os_check():  # check for the operating system used
         print('')
         print('--------------------------------------------------------------------------------')
         print('')
-    elif platform == "win32":
+    elif sys.platform == "win32":
         print("")
         print(
             "--------------------------------------------------------------------------------------------------------"
@@ -43,7 +42,7 @@ def os_check():  # check for the operating system used
             "---------------")
         print('')
     else:
-        print(platform, ': is not supported')
+        print(sys.platform, ': is not supported')
         input('Press Enter to continue:')
         sys.exit(1)
     print('Backup Completed Successfully')
