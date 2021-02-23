@@ -1,6 +1,8 @@
+import hashlib
 import os
-import sys
 import shutil
+import sys
+import traceback
 from sys import platform
 
 f1 = ''
@@ -79,8 +81,7 @@ def windows():
                                 print('Found Backup directory')
                                 number_of_drives += 1
                                 backup_folder = os.path.join(drive, 'FS_Backup', 'Minecraft', 'Java', 'worlds')
-                                with open(os.path.join(drive, 'FS_Backup', 'Minecraft', 'Java', 'worlds', \
-                                                       save + '.md5'), 'r') as f:
+                                with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
                                     file_md5 = f.read()
                                 if file_md5 == md5:
                                     continue
@@ -97,10 +98,43 @@ def windows():
 
 
 def linux():
-    print('placeholder')
-    os.chdir('/')
-    print(os.path.dirname(os.path.realpath(__file__)))
-    print(os.getcwd())
+    global number_of_drives, Total_file_size, number_of_saves, username
+    for user in os.listdir('/home'):  # check fo users
+        os.chdir(os.path.join('/home', user))  # change directory to /home/username
+        print('Found user:', user)
+        username = user
+        if os.path.exists(os.path.join('/home', user, '.minecraft', 'Mainsurvival',
+                                       'saves')):  # check if the user has installed minecraft correctly
+            print('Found Minecraft Installation')
+            os.chdir(os.path.join('/home', user, '.minecraft', 'Mainsurvival', 'saves'))
+            for save in os.listdir(os.getcwd()):  # do for every save in saves directory
+                print('Found world save:', save)
+                number_of_saves += 1  # add one number to number of saves
+                md5 = get_dir_hash(save, 0)  # calculate md5 checksum of save
+                for drive in os.listdir(os.path.join('/media', username)):  # check every drive mounted
+                    print('Found drive:', drive)
+                    if os.path.exists(os.path.join('/media', username, drive, 'FS_Backup', 'Minecraft', 'Java', \
+                                                   'worlds')):
+                        print('Found backup folder on drive')
+                        number_of_drives += 1
+                        backup_folder = os.path.join('/media', username, drive, 'FS_Backup', 'Minecraft', 'Java', \
+                                                     'worlds')
+                        with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
+                            file_md5 = f.read()
+                        if file_md5 == md5:
+                            continue
+                        else:
+                            backup(save, backup_folder ,md5)
+                    else:
+                        x = input('Do you want to create backup directory? (Y/n)')
+                        if x == 'Y' or x == 'y':
+                            os.mkdir(os.path.join('/media', username, drive, 'FS_Backup', 'Minecraft', 'Java', 'worlds'))
+                        elif x == 'n' or x == 'N':
+                            pass
+        elif os.path.exists(os.path.join('/home', user, '.minecraft')):
+            print('Minecraft Installation is Incomplete')
+        else:
+            print('No minecraft installation found')
 
 
 def backup(save, backup_folder, md5):
@@ -146,7 +180,6 @@ def alt_file_check(rum):
 
 def get_dir_hash(directory, verbose=0):
     global f1
-    import hashlib, os
     sha_hash = hashlib.md5()
     if not os.path.exists(directory):
         return -1
@@ -170,7 +203,6 @@ def get_dir_hash(directory, verbose=0):
                     sha_hash.update(hashlib.md5(buf).digest())
                 f1.close()
     except:
-        import traceback
         # Print the stack traceback
         traceback.print_exc()
         return -2
