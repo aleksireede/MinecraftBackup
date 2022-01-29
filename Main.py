@@ -5,6 +5,8 @@ import sys
 import traceback
 
 f1 = ''
+linux_line = '-'*92
+windows_line = '-'*107
 username = ''
 number_of_drives = 0
 Total_file_size = 0
@@ -16,31 +18,13 @@ drive_list = ['A:', 'B:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 
 
 def os_check():  # check for the operating system used
     if sys.platform == "linux" or sys.platform == "linux2":
-        print('')
-        print('--------------------------------------------------------------------------------')
-        print(OS_String, 'Linux')
-        print('--------------------------------------------------------------------------------')
-        print('')
+        print('\n',linux_line,OS_String,'Linux',linux_line,'\n')
         linux()
-        print('')
-        print('--------------------------------------------------------------------------------')
-        print('')
+        print('\n',linux_line,'\n')
     elif sys.platform == "win32":
-        print("")
-        print(
-            "--------------------------------------------------------------------------------------------------------"
-            "---------------")
-        print(OS_String, 'Windows')
-        print(
-            "--------------------------------------------------------------------------------------------------------"
-            "---------------")
-        print('')
+        print("\n",windows_line,OS_String,'Windows',windows_line,'\n')
         windows()
-        print("")
-        print(
-            "--------------------------------------------------------------------------------------------------------"
-            "---------------")
-        print('')
+        print("\n",windows_line,'\n')
     else:
         print(sys.platform, ': is not supported')
         input('Press Enter to continue:')
@@ -50,11 +34,14 @@ def os_check():  # check for the operating system used
         print('Total', alt_file_check(Total_file_size / (number_of_drives / number_of_saves)), )
     else:
         print('Files are already up to date')
+        input("Press Enter to continue...")
+        sys.exit(1)
     if number_of_drives != 0:
         print("Number of Backup Drives used:", number_of_drives / number_of_saves)
     else:
         print('No backup drives created/found')
     input("Press Enter to continue...")
+    sys.exit(1)
 
 
 def windows():
@@ -73,27 +60,25 @@ def windows():
                     number_of_saves += 1
                     md5 = get_dir_hash(save, 0)  # calculate save md5 hash
                     for drive in drive_list:  # search for backup drives
-                        if os.path.exists(drive):  # check if drive exists
-                            print('Found Drive:', drive)
-                            if os.path.exists(os.path.join(drive, 'FS_Backup', 'Minecraft', 'Java', \
-                                                           'worlds')):  # check if backup directory exists
-                                print('Found Backup directory')
-                                number_of_drives += 1
-                                backup_folder = os.path.join(drive, 'FS_Backup', 'Minecraft', 'Java', 'worlds')
-                                with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
-                                    file_md5 = f.read()
-                                if file_md5 == md5:
-                                    continue
-                                else:
-                                    backup(save, backup_folder, md5)
-                            else:
-                                x = input('Do you want to create backup directory? (Y/n)')
-                                if x == 'Y' or x == 'y':
-                                    os.mkdir(os.path.join(drive, 'FS_Backup', 'Minecraft', 'Java', 'worlds'))
-                                elif x == 'n' or x == 'N':
-                                    pass
-                        else:
+                        if not os.path.exists(drive):  # check if drive exists
                             continue
+                        print('Found Drive:', drive)
+                        if not os.path.exists(os.path.join(drive, 'Minecraft + Server', 'worlds [Java]')):  # check if backup directory exists
+                            x = input('Do you want to create backup directory? (Y/n)')
+                            if x == 'Y' or x == 'y':
+                                os.mkdir(os.path.join(drive, 'Minecraft + Server', 'worlds [Java]'))
+                            elif x == 'n' or x == 'N':
+                                pass
+                            continue
+                        print('Found Backup directory')
+                        number_of_drives += 1
+                        backup_folder = os.path.join(drive, 'Minecraft + Server', 'worlds [Java]')
+                        with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
+                            file_md5 = f.read()
+                        if file_md5 == md5:
+                            continue
+                        backup(save, backup_folder, md5)
+                        
 
 
 def linux():
@@ -102,8 +87,7 @@ def linux():
         os.chdir(os.path.join('/home', user))  # change directory to /home/username
         print('Found user:', user)
         username = user
-        if os.path.exists(os.path.join('/home', user, '.minecraft', 'Mainsurvival',
-                                       'saves')):  # check if the user has installed minecraft correctly
+        if os.path.exists(os.path.join('/home', user, '.minecraft', 'saves')):  # check if the user has installed minecraft correctly
             print('Found Minecraft Installation')
             os.chdir(os.path.join('/home', user, '.minecraft', 'Mainsurvival', 'saves'))
             for save in os.listdir(os.getcwd()):  # do for every save in saves directory
@@ -112,12 +96,10 @@ def linux():
                 md5 = get_dir_hash(save, 0)  # calculate md5 checksum of save
                 for drive in os.listdir(os.path.join('/media', username)):  # check every drive mounted
                     print('Found drive:', drive)
-                    if os.path.exists(os.path.join('/media', username, drive, 'FS_Backup', 'Minecraft', 'Java', \
-                                                   'worlds')):
+                    if os.path.exists(os.path.join('/media', username, drive, 'Minecraft + Server', 'worlds [Java]')):
                         print('Found backup folder on drive')
                         number_of_drives += 1
-                        backup_folder = os.path.join('/media', username, drive, 'FS_Backup', 'Minecraft', 'Java', \
-                                                     'worlds')
+                        backup_folder = os.path.join('/media', username, drive, 'Minecraft + Server', 'worlds [Java]')
                         with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
                             file_md5 = f.read()
                         if file_md5 == md5:
@@ -127,7 +109,7 @@ def linux():
                     else:
                         x = input('Do you want to create backup directory? (Y/n)')
                         if x == 'Y' or x == 'y':
-                            os.mkdir(os.path.join('/media', username, drive, 'FS_Backup', 'Minecraft', 'Java', 'worlds'))
+                            os.mkdir(os.path.join('/media', username, drive, 'Minecraft + Server', 'worlds [Java]'))
                         elif x == 'n' or x == 'N':
                             pass
         elif os.path.exists(os.path.join('/home', user, '.minecraft')):
@@ -155,26 +137,26 @@ def file_size_check(file_in):
 
 def alt_file_check(rum):
     romlen = ''
-    bytex = ''
+    suffix = ''
     if rum < 1000:
         romlen = rum
-        bytex = 'bytes'
+        suffix = 'bytes'
     elif rum < 1000000:
         romlen = rum / 1024
-        bytex = 'KB'
+        suffix = 'KiB'
     elif rum < 1000000000:
         romlen = rum / 1048576
-        bytex = 'MB'
+        suffix = 'MiB'
     elif rum < 1000000000000:
         romlen = rum / 1073741824
-        bytex = 'GB'
+        suffix = 'GiB'
     if romlen > 99:
         rumlen = str(romlen)[0:3]
     elif 99 > romlen > 10:
         rumlen = str(romlen)[0:2]
     else:
         rumlen = str(romlen)[0:1]
-    return 'File Size: ' + rumlen + ' ' + bytex
+    return 'File Size: ' + rumlen + ' ' + suffix
 
 
 def get_dir_hash(directory, verbose=0):
