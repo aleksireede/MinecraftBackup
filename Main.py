@@ -1,134 +1,177 @@
 import hashlib
-import os
+from pathlib import Path
 import shutil
 import sys
-import traceback
+import platform
+import os
+import string
+from datetime import datetime
 
+now = datetime.now() # current date and time
+day = now.strftime("%d")
+month = now.strftime("%m")
+year = now.strftime("%Y")
+
+date_append = '_('+day+'.'+month+'.'+year+')'
 f1 = ''
-linux_line = '-'*92
-windows_line = '-'*107
 username = ''
-number_of_drives = 0
+n_drives = 0
 Total_file_size = 0
-number_of_saves = 0
-OS_String = 'Your Operating system is:'
-drive_list = ['A:', 'B:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 'M:', 'N:', 'O:', 'P:', 'Q:', 'R:',
-              'S:', 'T:', 'U:', 'V:', 'W:', 'X:', 'Y:', 'Z:']
+n_saves = 0
+OS_String = 'Running on:'
+win_drive_list = []
+backup_dir = Path('Minecraft + Server', 'worlds [Java]')
+user_blacklist = ['All Users','Default','Default User','desktop.ini','Public','Administrator']
+windows_save_dir = Path('Appdata', 'Roaming', '.minecraft', 'saves')
+users_dir = ''
+os_type = ''
+save_dir = Path('.minecraft' , 'saves')
+
+def enter_to_exit(code):
+    input("Press Enter to continue...")
+    sys.exit(code)
+
+
+def os_line():
+    global os_type
+    if os_type == 'Windows':
+        return '-'*107
+    elif os_type == 'Linux' or os_type == 'Darwin':
+        return '-'*92
+    else:
+        return 0
 
 
 def os_check():  # check for the operating system used
-    if sys.platform == "linux" or sys.platform == "linux2":
-        print('\n',linux_line,OS_String,'Linux',linux_line,'\n')
-        linux()
-        print('\n',linux_line,'\n')
-    elif sys.platform == "win32":
-        print("\n",windows_line,OS_String,'Windows',windows_line,'\n')
-        windows()
-        print("\n",windows_line,'\n')
+    global users_dir,os_type,save_dir,win_drive_list,drive_list
+    for letter in string.ascii_uppercase:
+        win_drive_list.append(letter+':')
+    os_type =platform.system()
+    if os_type == 'Linux': 
+        users_dir = '/home'
+        drive_list = os.listdir(Path('/media', username))
+        #print('\n',os_line(),'\n',OS_String,'Linux\n',os_line(),'\n')
+        #linux()
+    elif os_type == "Windows":
+        users_dir = 'C:/Users'
+        save_dir =Path('Appdata', 'Roaming', save_dir)
+        drive_list = win_drive_list
+        #print("\n",os_line(),'\n',OS_String,'Windows\n',os_line(),'\n')
+    elif os_type == 'Darwin':
+        pass # insert mac os code here
     else:
-        print(sys.platform, ': is not supported')
-        input('Press Enter to continue:')
-        sys.exit(1)
+        print(platform.system(), ': is not supported')
+        enter_to_exit(1) ## Exit
+    print("\n",os_line(),'\n',OS_String,platform.system(),platform.release(),'\n',os_line(),'\n')
+    main()
+    print("\n",os_line(),'\n')
     print('Backup Completed Successfully')
-    if Total_file_size != 0 and number_of_drives != 0:
-        print('Total', alt_file_check(Total_file_size / (number_of_drives / number_of_saves)), )
+    if Total_file_size != 0 and n_drives != 0:
+        print('Total', alt_file_check(Total_file_size / (n_drives / n_saves)), )
     else:
         print('Files are already up to date')
-        input("Press Enter to continue...")
-        sys.exit(1)
-    if number_of_drives != 0:
-        print("Number of Backup Drives used:", number_of_drives / number_of_saves)
+        enter_to_exit(0) ## Exit
+    if n_drives != 0:
+        print("Number of Backup Drives used:", n_drives / n_saves)
     else:
         print('No backup drives created/found')
-    input("Press Enter to continue...")
-    sys.exit(1)
+    enter_to_exit(0) ## Exit
+
+def main():# main program for bot windows and linux
+    global users_dir,os_type,save_dir,n_saves,drive_list,n_drives
+    pass
+    for username in os.listdir(users_dir): #loop through users directory
+        os.chdir(users_dir)
+        if username in user_blacklist:continue
+        if not Path(users_dir,username,save_dir).exists: # checks if save folder exists
+            print('Minecraft Save folder not found...')
+            enter_to_exit(1)
+        if len(os.listdir(Path(users_dir,username,save_dir))) == 0:#checks is save folder is empty
+            print('Minecraft Save folder is empty...')
+            enter_to_exit(1)
+        os.chdir(Path(users_dir,username,save_dir))# change directory to save directory
+        for save in os.listdir(os.getcwd()):
+            n_saves += 1
+            md5 = md5_dir(save)
+            for drive in drive_list:
+                if not os.path.isdir(drive) and not os.path.isfile(drive):continue  # check if drive exists
+                print('Found Drive:', drive)
+                if not os.path.isdir(Path(drive, backup_dir)):  # check if backup directory exists
+                    x = input('Do you want to create backup directory on drive: '+drive+' ?(Y/n)')
+                    if x == 'Y' or x == 'y':
+                        os.mkdir(Path(drive, backup_dir)) #make the backup directory
+                    elif x == 'n' or x == 'N': continue #backup  folder not created by user so skip
+                print('Found Backup directory')
+                n_drives += 1
+                backup_folder = Path(drive, backup_dir)
+                backup_check(save,backup_folder,md5)
 
 
-def windows():
-    global number_of_drives, Total_file_size, number_of_saves
-    for user in os.listdir('C:/Users'):  # check for users
-        os.chdir('C:/Users')  # change directory to users dir
-        if user != 'All Users' and user != 'Default' and user != 'Default User' and user != 'desktop.ini' \
-                and user != 'Public':
-            print('Found User:', user)  # real user found
-            if os.path.exists(os.path.join('C://', 'Users', user, 'Appdata', 'Roaming', '.minecraft', \
-                                           'MainSurvival', 'saves')):  # check if save directory exists
-                os.chdir(
-                    os.path.join(user, 'Appdata', 'Roaming', '.minecraft', \
-                                 'MainSurvival', 'saves'))  # change directory to save directory
-                for save in os.listdir(os.getcwd()):  # do for every save
-                    number_of_saves += 1
-                    md5 = get_dir_hash(save, 0)  # calculate save md5 hash
-                    for drive in drive_list:  # search for backup drives
-                        if not os.path.exists(drive):  # check if drive exists
-                            continue
-                        print('Found Drive:', drive)
-                        if not os.path.exists(os.path.join(drive, 'Minecraft + Server', 'worlds [Java]')):  # check if backup directory exists
-                            x = input('Do you want to create backup directory? (Y/n)')
-                            if x == 'Y' or x == 'y':
-                                os.mkdir(os.path.join(drive, 'Minecraft + Server', 'worlds [Java]'))
-                            elif x == 'n' or x == 'N':
-                                pass
-                            continue
-                        print('Found Backup directory')
-                        number_of_drives += 1
-                        backup_folder = os.path.join(drive, 'Minecraft + Server', 'worlds [Java]')
-                        with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
-                            file_md5 = f.read()
-                        if file_md5 == md5:
-                            continue
-                        backup(save, backup_folder, md5)
+def backup_check(save,backup_folder,md5):
+    if not os.path.exists(os.path.join(backup_folder, save + '.md5')):
+        backup(save, backup_folder, md5)
+    else:
+        with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
+            file_md5 = f.read()
+        if file_md5 == md5: pass # if the file has not been changed skip
+        else:
+            backup(save, backup_folder, md5)
+                
                         
 
-
-def linux():
-    global number_of_drives, Total_file_size, number_of_saves, username
-    for user in os.listdir('/home'):  # check fo users
+def linux(): # for linux only
+    global n_drives, Total_file_size, n_saves, username
+    for user in os.listdir('/home'):  # check for users
         os.chdir(os.path.join('/home', user))  # change directory to /home/username
         print('Found user:', user)
         username = user
-        if os.path.exists(os.path.join('/home', user, '.minecraft', 'saves')):  # check if the user has installed minecraft correctly
-            print('Found Minecraft Installation')
-            os.chdir(os.path.join('/home', user, '.minecraft', 'Mainsurvival', 'saves'))
-            for save in os.listdir(os.getcwd()):  # do for every save in saves directory
-                print('Found world save:', save)
-                number_of_saves += 1  # add one number to number of saves
-                md5 = get_dir_hash(save, 0)  # calculate md5 checksum of save
-                for drive in os.listdir(os.path.join('/media', username)):  # check every drive mounted
-                    print('Found drive:', drive)
-                    if os.path.exists(os.path.join('/media', username, drive, 'Minecraft + Server', 'worlds [Java]')):
-                        print('Found backup folder on drive')
-                        number_of_drives += 1
-                        backup_folder = os.path.join('/media', username, drive, 'Minecraft + Server', 'worlds [Java]')
-                        with open(os.path.join(backup_folder, save + '.md5'), 'r') as f:
-                            file_md5 = f.read()
-                        if file_md5 == md5:
-                            continue
-                        else:
-                            backup(save, backup_folder ,md5)
-                    else:
-                        x = input('Do you want to create backup directory? (Y/n)')
-                        if x == 'Y' or x == 'y':
-                            os.mkdir(os.path.join('/media', username, drive, 'Minecraft + Server', 'worlds [Java]'))
-                        elif x == 'n' or x == 'N':
-                            pass
-        elif os.path.exists(os.path.join('/home', user, '.minecraft')):
-            print('Minecraft Installation is Incomplete')
-        else:
+        if not os.path.exists(os.path.join('/home', username, '.minecraft', 'saves')):  # check if the user has installed minecraft correctly
             print('No minecraft installation found')
+            if os.path.exists(os.path.join('/home', user, '.minecraft')):
+                print('Minecraft Installation is Incomplete')
+            enter_to_exit(1)
+        if len(os.listdir(os.path.join('/home',username,'.minecraft','saves'))) == 0:
+            print(os_line(),'\nMinecraft save folder is empty...\n',os_line())
+            enter_to_exit(0)
+        print('Found Minecraft Installation')
+        os.chdir(os.path.join('/home', username, '.minecraft',  'saves'))
+        for save in os.listdir(os.getcwd()):  # do for every save in saves directory
+            print('Found world save:', save)
+            n_saves += 1  # add one number to number of saves
+            md5 = md5_dir(save)  # calculate md5 checksum of save
+            for drive in os.listdir(os.path.join('/media', username)):  # check every drive mounted
+                print('Found drive:', drive)
+                if not os.path.exists(os.path.join('/media', username, drive, backup_dir)):
+                    x = input('Do you want to create backup directory? (Y/n)')
+                    if x == 'Y' or x == 'y':
+                        os.mkdir(os.path.join('/media', username, drive, backup_dir))
+                    elif x == 'n' or x == 'N':
+                        continue
+                print('Found backup folder on drive')
+                n_drives += 1
+                backup_folder = os.path.join('/media', username, drive, backup_dir)
+                backup_check(save,backup_folder,md5)    
 
 
-def backup(save, backup_folder, md5):
-    shutil.make_archive(save, 'zip', os.path.join(os.getcwd(), save))
-    os.rename(save + '.zip', save + '.minew')
-    shutil.move(save + '.minew', os.path.join(backup_folder, save + '.minew'))
-    with open(save + '.md5', 'w') as file:
-        file.write(md5)
-    shutil.move(save + '.md5', os.path.join(backup_folder, save + '.md5'))
-    print(file_size_check(os.path.join(backup_folder, save + '.minew')))
+def backup(save, backup_folder, md5): # make a tar.gz archive and move it to backup location and make checksum file .md5
+    shutil.make_archive(save, 'gztar', Path(os.getcwd(), save))
+    if '_' in save:
+        savename = save.split('_')
+        new_filename = Path(savename[0] + date_append +'.minew')
+        md5file = Path(savename[0] + date_append + '.md5')
+        shutil.move(Path(os.getcwd(),save),Path(os.getcwd(),savename[0]+date_append))
+    else:
+        md5file = Path(save + date_append + '.md5')
+        new_filename = Path(save + date_append + '.minew')
+        shutil.move(Path(os.getcwd(),save),Path(os.getcwd(),save+date_append))
+    os.rename(save + '.tar.gz', new_filename)
+    shutil.move(new_filename, Path(backup_folder,new_filename))
+    open(md5file, 'w+').write(str(md5))
+    shutil.move(md5file, Path(backup_folder, md5file))
+    print(file_size_check(Path(backup_folder, new_filename)))
 
 
-def file_size_check(file_in):
+def file_size_check(file_in):# returns the filesize
     global Total_file_size
     size = os.path.getsize(file_in)
     Total_file_size += size
@@ -159,36 +202,22 @@ def alt_file_check(rum):
     return 'File Size: ' + rumlen + ' ' + suffix
 
 
-def get_dir_hash(directory, verbose=0):
-    global f1
-    sha_hash = hashlib.md5()
-    if not os.path.exists(directory):
-        return -1
-    try:
-        for root, dirs, files in os.walk(directory):
-            for names in files:
-                if verbose == 1:
-                    print('Hashing', names)
-                filepath = os.path.join(root, names)
-                try:
-                    f1 = open(filepath, 'rb')
-                except:
-                    # You can't open the file for some reason
-                    f1.close()
-                    continue
-                while 1:
-                    # Read file in as little chunks
-                    buf = f1.read(4096)
-                    if not buf:
-                        break
-                    sha_hash.update(hashlib.md5(buf).digest())
-                f1.close()
-    except:
-        # Print the stack traceback
-        traceback.print_exc()
-        return -2
-    return sha_hash.hexdigest()
+def md5_update_from_dir(directory, hash):
+    print(directory)
+    assert Path(directory).is_dir()
+    for path in sorted(Path(directory).iterdir(), key=lambda p: str(p).lower()):
+        hash.update(path.name.encode())
+        if path.is_file():
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash.update(chunk)
+        elif path.is_dir():
+            hash = md5_update_from_dir(path, hash)
+    return hash
 
+
+def md5_dir(directory):
+    return md5_update_from_dir(directory, hashlib.md5()).hexdigest()
 
 if __name__ == '__main__':
     os_check()
